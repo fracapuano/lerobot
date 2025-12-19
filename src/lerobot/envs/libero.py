@@ -93,7 +93,7 @@ TASK_SUITE_MAX_STEPS: dict[str, int] = {
 
 
 class LiberoEnv(gym.Env):
-    metadata = {"render_modes": ["rgb_array"], "render_fps": 80}
+    metadata = {"render_modes": ["rgb_array", "human"], "render_fps": 80}
 
     def __init__(
         self,
@@ -220,6 +220,13 @@ class LiberoEnv(gym.Env):
         raw_obs = self._env.env._get_observations()
         image = self._format_raw_obs(raw_obs)["pixels"]["image"]
         image = image[::-1, ::-1]  # flip both H and W for visualization
+
+        if self.render_mode == "human":
+            import cv2
+
+            cv2.imshow("LiberoEnv", cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+            cv2.waitKey(1)
+
         return image
 
     def _make_envs_task(self, task_suite: Any, task_id: int = 0):
@@ -344,6 +351,10 @@ class LiberoEnv(gym.Env):
         return observation, reward, terminated, truncated, info
 
     def close(self):
+        if self.render_mode == "human":
+            import cv2
+
+            cv2.destroyAllWindows()
         self._env.close()
 
 
