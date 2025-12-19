@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from __future__ import annotations
 
 import os
@@ -300,6 +301,7 @@ class LiberoEnv(gym.Env):
         self._env.seed(seed)
         if self.init_states and self._init_states is not None:
             self._env.set_init_state(self._init_states[self._init_state_id])
+        self.episode_steps = 0
         raw_obs = self._env.reset()
 
         # After reset, objects may be unstable (slightly floating, intersecting, etc.).
@@ -327,9 +329,11 @@ class LiberoEnv(gym.Env):
                 f"but got shape {action.shape} with ndim={action.ndim}"
             )
         raw_obs, reward, done, info = self._env.step(action)
+        self.episode_steps += 1
 
         is_success = self._env.check_success()
         terminated = done or is_success
+        truncated = self.episode_steps >= self._max_episode_steps
         info.update(
             {
                 "task": self.task,
@@ -339,7 +343,7 @@ class LiberoEnv(gym.Env):
             }
         )
         observation = self._format_raw_obs(raw_obs)
-        if terminated:
+        if terminated or truncated:
             info["final_info"] = {
                 "task": self.task,
                 "task_id": self.task_id,
@@ -347,7 +351,6 @@ class LiberoEnv(gym.Env):
                 "is_success": bool(is_success),
             }
             self.reset()
-        truncated = False
         return observation, reward, terminated, truncated, info
 
     def close(self):
